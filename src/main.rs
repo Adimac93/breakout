@@ -51,7 +51,35 @@ impl Block {
         }
     }
     pub fn draw(&self) {
-        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, BLUE)
+        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, DARKGRAY)
     }
 }
+#[macroquad::main("breakout")]
+async fn main() {
+    let mut player = Player::new();
+    let mut blocks = Vec::<Block>::new();
+
+    let (width, height) = (6, 6);
+    let padding = 5f32;
+    let total_block_size = BLOCK_SIZE + vec2(padding, padding);
+    let board_start_pos = vec2(
+        (screen_width() - (total_block_size.x * width as f32)) * 0.5f32,
+        50f32,
+    );
+
+    for i in 0..width * height {
+        let block_x = (i % width) as f32 * total_block_size.x;
+        let block_y = (i / width) as f32 * total_block_size.y;
+        blocks.push(Block::new(board_start_pos + vec2(block_x, block_y)))
+    }
+
+    loop {
+        player.update(get_frame_time());
+        clear_background(WHITE);
+        player.draw();
+        for block in blocks.iter() {
+            block.draw();
+        }
+        next_frame().await
+    }
 }
