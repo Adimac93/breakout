@@ -131,6 +131,7 @@ async fn main() {
     let font = load_ttf_font("res/font.ttf").await.unwrap();
     let mut score = 0;
     let mut player = Player::new();
+    let mut player_lives = 3;
     let mut blocks = Vec::<Block>::new();
     let mut balls = Vec::<Ball>::new();
 
@@ -170,6 +171,14 @@ async fn main() {
             }
         }
 
+        let balls_len = balls.len();
+        let was_last_ball = balls_len == 1;
+        balls.retain(|ball| ball.rect.y < screen_height());
+        let removed_balls = balls_len - balls.len();
+        if removed_balls > 0 && was_last_ball {
+            player_lives -= 1
+        }
+
         blocks.retain(|block| block.lives > 0);
 
         clear_background(WHITE);
@@ -186,6 +195,18 @@ async fn main() {
         draw_text_ex(
             &format!("score: {score}"),
             screen_width() * 0.5f32 - score_text_dim.width * 0.5f32,
+            40.0,
+            TextParams {
+                font,
+                font_size: 30u16,
+                color: BLACK,
+                ..Default::default()
+            },
+        );
+
+        draw_text_ex(
+            &format!("lives: {player_lives}"),
+            30.0,
             40.0,
             TextParams {
                 font,
