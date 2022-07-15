@@ -51,11 +51,15 @@ impl Block {
     pub fn new(pos: Vec2) -> Self {
         Self {
             rect: Rect::new(pos.x, pos.y, BLOCK_SIZE.x, BLOCK_SIZE.y),
-            lives: 1,
+            lives: 2,
         }
     }
     pub fn draw(&self) {
-        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, DARKGRAY)
+        let color = match self.lives {
+            2 => RED,
+            _ => ORANGE,
+        };
+        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, color)
     }
 }
 
