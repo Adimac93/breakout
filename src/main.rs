@@ -148,16 +148,26 @@ fn resolve_collision(a: &mut Rect, vel: &mut Vec2, b: &Rect) -> bool {
     true
 }
 
-#[macroquad::main("breakout")]
-async fn main() {
-    let font = load_ttf_font("res/font.ttf").await.unwrap();
-    let mut game_state = GameState::Menu;
-    let mut score = 0;
-    let mut player = Player::new();
-    let mut player_lives = 3;
-    let mut blocks = Vec::<Block>::new();
-    let mut balls = Vec::<Ball>::new();
+fn reset_game(
+    score: &mut i32,
+    player_lives: &mut i32,
+    blocks: &mut Vec<Block>,
+    balls: &mut Vec<Ball>,
+    player: &mut Player,
+) {
+    *player = Player::new();
+    *score = 0;
+    *player_lives = 3;
+    balls.clear();
+    balls.push(Ball::new(vec2(
+        screen_width() * 0.5f32 - BALL_SIZE * 0.5f32,
+        screen_height() * 0.5f32,
+    )));
+    blocks.clear();
+    init_blocks(blocks);
+}
 
+fn init_blocks(blocks: &mut Vec<Block>) {
     let (width, height) = (6, 6);
     let padding = 5f32;
     let total_block_size = BLOCK_SIZE + vec2(padding, padding);
@@ -171,6 +181,18 @@ async fn main() {
         let block_y = (i / width) as f32 * total_block_size.y;
         blocks.push(Block::new(board_start_pos + vec2(block_x, block_y)))
     }
+}
+#[macroquad::main("breakout")]
+async fn main() {
+    let font = load_ttf_font("res/font.ttf").await.unwrap();
+    let mut game_state = GameState::Menu;
+    let mut score = 0;
+    let mut player = Player::new();
+    let mut player_lives = 3;
+    let mut blocks = Vec::<Block>::new();
+    let mut balls = Vec::<Ball>::new();
+
+    init_blocks(&mut blocks);
 
     balls.push(Ball::new(vec2(
         screen_width() * 0.5f32,
@@ -219,6 +241,12 @@ async fn main() {
                     player_lives -= 1;
                     if player_lives <= 0 {
                         game_state = GameState::Dead;
+                    } else {
+                        balls.push(Ball::new(vec2(
+                            screen_width() * 0.5f32,
+                            screen_height() * 0.5f32,
+                        )));
+                        player.rect.x = screen_width() * 0.5f32 - player.rect.w * 0.5f32;
                     }
                 }
 
@@ -229,9 +257,29 @@ async fn main() {
             }
             GameState::LevelCompleted => {
                 draw_title_text(&format!("You won! {score} score"), font);
+                if (is_key_pressed(KeyCode::Space)) {
+                    game_state = GameState::Menu;
+                    reset_game(
+                        &mut score,
+                        &mut player_lives,
+                        &mut blocks,
+                        &mut balls,
+                        &mut player,
+                    )
+                }
             }
             GameState::Dead => {
                 draw_title_text(&format!("You died! {score} score"), font);
+                if (is_key_pressed(KeyCode::Space)) {
+                    game_state = GameState::Menu;
+                    reset_game(
+                        &mut score,
+                        &mut player_lives,
+                        &mut blocks,
+                        &mut balls,
+                        &mut player,
+                    )
+                }
             }
         }
 
