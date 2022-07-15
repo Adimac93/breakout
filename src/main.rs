@@ -6,6 +6,28 @@ const PLAYER_SPEED: f32 = 700f32;
 const BALL_SIZE: f32 = 50f32;
 const BALL_SPEED: f32 = 400f32;
 
+pub fn draw_title_text(text: &str, font: Font) {
+    let dims = measure_text(text, Some(font), 50u16, 1.0);
+    draw_text_ex(
+        text,
+        screen_width() * 0.5f32 - dims.width * 0.5f32,
+        screen_height() * 0.5f32 - dims.height * 0.5f32,
+        TextParams {
+            font,
+            font_size: 50u16,
+            color: BLACK,
+            ..Default::default()
+        },
+    );
+}
+
+pub enum GameState {
+    Menu,
+    Game,
+    LevelCompleted,
+    Dead,
+}
+
 struct Player {
     rect: Rect,
 }
@@ -129,6 +151,7 @@ fn resolve_collision(a: &mut Rect, vel: &mut Vec2, b: &Rect) -> bool {
 #[macroquad::main("breakout")]
 async fn main() {
     let font = load_ttf_font("res/font.ttf").await.unwrap();
+    let mut game_state = GameState::Menu;
     let mut score = 0;
     let mut player = Player::new();
     let mut player_lives = 3;
@@ -155,32 +178,6 @@ async fn main() {
     )));
 
     loop {
-        player.update(get_frame_time());
-        for ball in balls.iter_mut() {
-            ball.update(get_frame_time());
-        }
-        for ball in balls.iter_mut() {
-            resolve_collision(&mut ball.rect, &mut ball.vel, &player.rect);
-            for block in blocks.iter_mut() {
-                if resolve_collision(&mut ball.rect, &mut ball.vel, &block.rect) {
-                    block.lives -= 1;
-                    if block.lives <= 0 {
-                        score += 10;
-                    }
-                }
-            }
-        }
-
-        let balls_len = balls.len();
-        let was_last_ball = balls_len == 1;
-        balls.retain(|ball| ball.rect.y < screen_height());
-        let removed_balls = balls_len - balls.len();
-        if removed_balls > 0 && was_last_ball {
-            player_lives -= 1
-        }
-
-        blocks.retain(|block| block.lives > 0);
-
         clear_background(WHITE);
         player.draw();
         for block in blocks.iter() {
@@ -188,6 +185,54 @@ async fn main() {
         }
         for ball in balls.iter() {
             ball.draw();
+        }
+
+        match game_state {
+            GameState::Menu => {
+                draw_title_text("Press SPACE to start", font);
+                if is_key_pressed(KeyCode::Space) {
+                    game_state = GameState::Game;
+                }
+            }
+            GameState::Game => {
+                player.update(get_frame_time());
+                for ball in balls.iter_mut() {
+                    ball.update(get_frame_time());
+                }
+                for ball in balls.iter_mut() {
+                    resolve_collision(&mut ball.rect, &mut ball.vel, &player.rect);
+                    for block in blocks.iter_mut() {
+                        if resolve_collision(&mut ball.rect, &mut ball.vel, &block.rect) {
+                            block.lives -= 1;
+                            if block.lives <= 0 {
+                                score += 10;
+                            }
+                        }
+                    }
+                }
+
+                let balls_len = balls.len();
+                let was_last_ball = balls_len == 1;
+                balls.retain(|ball| ball.rect.y < screen_height());
+                let removed_balls = balls_len - balls.len();
+                if removed_balls > 0 && was_last_ball {
+                    player_lives -= 1;
+                    if player_lives <= 0 {
+                        game_state = GameState::Dead;
+                    }
+                }
+
+                blocks.retain(|block| block.lives > 0);
+                if blocks.is_empty() {
+                    game_state = GameState::LevelCompleted;
+                }
+            }
+            GameState::LevelCompleted => {
+                draw_title_text(&format!("You won! {score} score"), font);
+            }
+            GameState::Dead => {
+                draw_title_text(&format!("You died! {score} score"), font);
+            }
         }
 
         let score_text = format!("score: {score}");
